@@ -17,16 +17,21 @@ public class PlayerController : MonoBehaviour
     BoxCollider _playerCollider;                            // 플레이어 BoxCollider
     Coroutine _beforeRestartRunCoroutine;                   // Restart 코루틴 동작을 위한 이전 코루틴 참조변수
 
+    private bool isInvincible = false;
+    private Renderer[] renderers;
+
     bool _isJump;                                           // 점프 코루틴 실행중인가 
     bool _isKnockBacked;                                    // 넉백 코루틴 실행중인가
     bool _isSliding;                                        // 슬라이딩 코루틴 실행중인가
     int _health;                                            // 현재 체력
     float _maxSpeed;                                        // 플레이어 최대 속도
     float _speed;                                           // 플레이어의 이동속도
+    Vector3 _gravity;
 
     public bool IsDead;                                     // 사망했는가
     
-    const float JUMP_FORCE = 8f;                            // 점프 세기
+    public float JUMP_FORCE = 28f;                            // 점프 높이
+    const float JUMP_Distance = 4f;                           // 점프 거리
     const float KNOCK_BACK_FORCE = 10f;                     // 넉백 세기
     const float START_SPEED = 5f;                           // 최초 속도
     const float RUN_RESTART_DELAY = 1f;                     // 충돌후 원래 속도로 돌아가는데 걸리는 시간
@@ -36,8 +41,10 @@ public class PlayerController : MonoBehaviour
 
     private void Awake()
     {
+        renderers = GetComponentsInChildren<Renderer>();
 
         // 필드 초기화
+        _gravity = new Vector3(0, -9.8f, 0);
         _maxSpeed = START_SPEED;
         _speed = _maxSpeed;
         
@@ -64,7 +71,7 @@ public class PlayerController : MonoBehaviour
         }
 
         // 플레이어의 y축 좌표를 확인하여 점프 한 상태인지 확인
-        if (transform.position.y > 0.005f)
+        if (transform.position.y > 0.000001f)
         {
             JumpToggle(true);
         }
@@ -82,6 +89,12 @@ public class PlayerController : MonoBehaviour
         {
             transform.position = new Vector3(-3, transform.position.y, transform.position.z);
         }
+        if (transform.position.y <= 0)
+        {
+            transform.position = new Vector3(transform.position.x, 0f, transform.position.z);
+        }
+
+
 
         // 낙사하면 발생.
         // 플레이 도중 낙사하지 않도록 조정은 하였지만, 시작하자마자 바깥으로 떨어지는 경우에 작동하도록 남겨둠
@@ -118,7 +131,16 @@ public class PlayerController : MonoBehaviour
 
 
         // 계산된 MoveVector 방향으로 이동
-        transform.position += _moveVector * Time.deltaTime;
+        if (_isJump)
+        {
+
+            transform.position += new Vector3(_moveVector.x,(_moveVector.y + _gravity.y), JUMP_Distance ) * Time.deltaTime;
+        }
+        else
+        {
+            transform.position += (_moveVector + _gravity) * Time.deltaTime;
+        }
+
     }
 
 
@@ -177,6 +199,33 @@ public class PlayerController : MonoBehaviour
         _isSliding = false;                                            // 슬라이딩 끝났음을 알림
     }
 
+    public IEnumerator ActivateInvincibility(float duration, float blinkInterval = 0.1f)
+    {
+        isInvincible = true;
+        float elapsed = 0f;
+
+        while (elapsed < duration)
+        {
+            ToggleRenderers(false); // 숨김
+            yield return new WaitForSeconds(blinkInterval);
+            ToggleRenderers(true);  // 표시
+            yield return new WaitForSeconds(blinkInterval);
+
+            elapsed += blinkInterval * 2;
+        }
+
+        ToggleRenderers(true); // 종료 후 표시 유지
+        isInvincible = false;
+    }
+
+    private void ToggleRenderers(bool visible)
+    {
+        foreach (var renderer in renderers)
+        {
+            renderer.enabled = visible;
+        }
+    }
+
     // 사망시, 사망 애니메이션 재생되는 것을 볼 수 있도록 딜레이
     IEnumerator C_DeathDelay()
     {
@@ -185,6 +234,19 @@ public class PlayerController : MonoBehaviour
         GameManager.Instance.ScoreManager.SettleScore();
     }
 
+    IEnumerator C_Jump()
+    {
+        while (_moveVector.y < JUMP_FORCE)
+        {
+            _moveVector += Vector3.up;
+            yield return null;
+        }
+        while (_moveVector.y > 0)
+        {
+            _moveVector += Vector3.down;
+            yield return null;
+        }
+    }
 
     // PublicMethods
 
@@ -220,13 +282,21 @@ public class PlayerController : MonoBehaviour
     private void GetDamage()
     {
         _health--;
+
+
         _hud.GetDamage();                  // HUD 의 하트 이미지 1개 감소하는 함수 호출
 
         if (_health <= 0)
         {
             OnDeath();                     // 체력 <0 이면 사망 메서드 호출
         }
-        StartCoroutine(C_KnockBack());     // 넉백
+        else
+        {
+            StartCoroutine(ActivateInvincibility(2f));
+            StartCoroutine(C_KnockBack());     // 넉백
+        }
+        
+         
     }
 
     // 사망
@@ -242,7 +312,7 @@ public class PlayerController : MonoBehaviour
 
     private void OnCollisionStay(Collision collision)
     {
-        if (collision.gameObject.CompareTag("Obstacle")&& _isKnockBacked ==false)
+        if (collision.gameObject.CompareTag("Obstacle")&& _isKnockBacked ==false && IsDead ==false)
         {
             _speed = 0f;
             GetDamage();
@@ -284,7 +354,6 @@ public class PlayerController : MonoBehaviour
     }
 
 
-
     //InputActions
 
     /// <summary>
@@ -305,9 +374,12 @@ public class PlayerController : MonoBehaviour
     {
         if (context.performed&& _isJump == false)
         {
-            _playerRb.AddForce(Vector3.up * JUMP_FORCE, ForceMode.Impulse);
+            //_playerRb.AddForce(Vector3.up * JUMP_FORCE, ForceMode.Impulse);
+            StartCoroutine(C_Jump());
         }
     }
+
+ 
 
     /// <summary>
     /// InputSystem 의 Value 형식으로 동작. 좌우 방향키 또는  A, S키 입력 시, 좌 우 이동.
@@ -319,7 +391,7 @@ public class PlayerController : MonoBehaviour
         
         if(input != null && _isJump == false)
         {
-            _moveVector = new Vector3(input.x*_maxSpeed, 0f, _speed);
+            _moveVector = new Vector3(input.x*_maxSpeed, _moveVector.y, _speed);
         }
     }
 }

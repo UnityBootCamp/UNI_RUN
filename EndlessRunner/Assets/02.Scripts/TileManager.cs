@@ -26,9 +26,10 @@ public class TileManager : MonoBehaviour
 
     const int TILE_ON_SCREEN = 7;                       // 화면에 배치할 타일 개수
 
+   
     void Start()
     {
-        _preTileIndex = 1;                              
+        _preTileIndex = 1;
         _tiles = new Queue<GameObject>();
         _hearts = new Queue<GameObject>();
         _playerTransform = GameObject.FindGameObjectWithTag("Player").transform;
@@ -57,7 +58,7 @@ public class TileManager : MonoBehaviour
   
 
     private void Spawn()
-    {
+    { 
         // 타일 생성
         GameObject tile = Instantiate(ChooseRandomPlatform(Mathf.Min(GameManager.Instance.ScoreManager.level,5)));
         tile.transform.SetParent(transform);
@@ -82,6 +83,8 @@ public class TileManager : MonoBehaviour
     /// <param name="tile"> 체력증가 아이템을 생성할 타일 </param>
     private void GenerateRandomHeart(GameObject tile)
     {
+        
+
         Random random = new Random();
         int checkRandom = random.Next(0, 100);  // 0 ~ 99
         if(checkRandom < 2 * GameManager.Instance.ScoreManager.level)   
@@ -104,6 +107,8 @@ public class TileManager : MonoBehaviour
     /// </summary>
     private void Release()
     {
+        
+
         if (_hearts.Count != 0)
         {
             Transform tile = _tiles.Peek().transform;
@@ -124,11 +129,15 @@ public class TileManager : MonoBehaviour
     // 이번에 생성할 타일의 랜덤한 인덱스를 선택
     private GameObject ChooseRandomPlatform(int tileRange)
     {
+        
+
         Random random = new Random();
         int tileIndex = 0;
 
         // 레벨에 맞는 타일 범위에서 랜덤한 인덱스를 뽑음
         tileIndex = random.Next(0, tileRange);
+
+        Debug.Log(tileRange);
 
         // 이전 타일과 같다면
         if(tileIndex == _preTileIndex)

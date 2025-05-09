@@ -1097,7 +1097,6 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: 7ff4c2eed8f37eb409b9a5108dcfe1c0, type: 3}
   m_Name: 
   m_EditorClassIdentifier: 
-  _deadManager: {fileID: 942261883}
   playerController: {fileID: 970623334}
   scoreText: {fileID: 436704809}
   levelText: {fileID: 1240419013}
@@ -1899,23 +1898,23 @@ PrefabInstance:
       objectReference: {fileID: 0}
     - target: {fileID: 4593184485727747213, guid: f4d35c5de0436bf499f8501b915f178c, type: 3}
       propertyPath: m_Range
-      value: 11.116165
+      value: 4
       objectReference: {fileID: 0}
     - target: {fileID: 4593184485727747213, guid: f4d35c5de0436bf499f8501b915f178c, type: 3}
       propertyPath: m_Color.b
-      value: 0.064495414
+      value: 0.05240625
       objectReference: {fileID: 0}
     - target: {fileID: 4593184485727747213, guid: f4d35c5de0436bf499f8501b915f178c, type: 3}
       propertyPath: m_Color.g
-      value: 0.41905257
+      value: 0.17468749
       objectReference: {fileID: 0}
     - target: {fileID: 4593184485727747213, guid: f4d35c5de0436bf499f8501b915f178c, type: 3}
       propertyPath: m_Color.r
-      value: 0.7848441
+      value: 0.559
       objectReference: {fileID: 0}
     - target: {fileID: 4593184485727747213, guid: f4d35c5de0436bf499f8501b915f178c, type: 3}
       propertyPath: m_Intensity
-      value: 4.738081
+      value: 0
       objectReference: {fileID: 0}
     m_RemovedComponents: []
     m_RemovedGameObjects: []
@@ -2367,7 +2366,7 @@ PrefabInstance:
       objectReference: {fileID: 0}
     - target: {fileID: 5472325137840687905, guid: f008c3e8c95d26b4a90423913f60cd31, type: 3}
       propertyPath: m_UseGravity
-      value: 1
+      value: 0
       objectReference: {fileID: 0}
     - target: {fileID: 6292315367461912958, guid: f008c3e8c95d26b4a90423913f60cd31, type: 3}
       propertyPath: m_ApplyRootMotion
