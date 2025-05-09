@@ -133,7 +133,7 @@ public class PlayerController : MonoBehaviour
         }
         else
         {
-            transform.position += new Vector3(_moveVector.x, _moveVector.y , _speed) * Time.deltaTime;
+            transform.position += new Vector3(_moveVector.x, _moveVector.y , _speed) * Time.deltaTime ;
         }
 
 
