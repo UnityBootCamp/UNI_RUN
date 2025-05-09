@@ -1,0 +1,46 @@
+{
+    "name": "Sample",
+    "maps": [
+        {
+            "name": "New action map",
+            "id": "484efdef-d3ac-41f9-9f8a-5d4d79d211b0",
+            "actions": [
+                {
+                    "name": "New action",
+                    "type": "Button",
+                    "id": "09973019-4735-4613-819a-206010d9002c",
+                    "expectedControlType": "",
+                    "processors": "",
+                    "interactions": "",
+                    "initialStateCheck": false
+                }
+            ],
+            "bindings": [
+                {
+                    "name": "",
+                    "id": "482b812c-2c12-4101-9a8f-75e3c3035acd",
+                    "path": "",
+                    "interactions": "",
+                    "processors": "",
+                    "groups": "",
+                    "action": "New action",
+                    "isComposite": false,
+                    "isPartOfComposite": false
+                }
+            ]
+        }
+    ],
+    "controlSchemes": [
+        {
+            "name": "SampleScheme",
+            "bindingGroup": "SampleScheme",
+            "devices": [
+                {
+                    "devicePath": "<Keyboard>",
+                    "isOptional": false,
+                    "isOR": false
+                }
+            ]
+        }
+    ]
+}
