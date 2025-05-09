@@ -1,16 +1,11 @@
 using System.Collections;
 using UnityEngine;
-using System;
-using UnityEngine.UI;
-using UnityEngine.EventSystems;
 using UnityEngine.InputSystem;
 
 
 
 public class PlayerController : MonoBehaviour
 {
-    //CharacterController _controller;
-
     [SerializeField] ParticleSystem _hitParticle;           // 피격 파티클
     [SerializeField] ParticleSystem _deadParticle;          // 사망 파티클
     [SerializeField] HUD _hud;                              // HUD 참조
@@ -26,7 +21,7 @@ public class PlayerController : MonoBehaviour
     bool _isKnockBacked;                                    // 넉백 코루틴 실행중인가
     bool _isSliding;                                        // 슬라이딩 코루틴 실행중인가
     int _health;                                            // 현재 체력
-    float _maxSpeed;                                        // 초기 속도
+    float _maxSpeed;                                        // 플레이어 최대 속도
     float _speed;                                           // 플레이어의 이동속도
 
     public bool IsDead;                                     // 사망했는가
@@ -55,7 +50,6 @@ public class PlayerController : MonoBehaviour
         _playerRb = GetComponent<Rigidbody>();
         _moveVector = Vector3.forward * _speed;
         _health = 3;
-        //_controller = GetComponent<CharacterController>();
     }
 
     void Update()
@@ -64,29 +58,22 @@ public class PlayerController : MonoBehaviour
             return;
 
         // 카메라 컨트롤러를 이용해 플레이어 움직임 전에 카메라 연출 진행
-
         if (Time.timeSinceLevelLoad < CameraController._cameraAnimateDuration)
         {
-            //_controller.Move(Vector3.forward * _speed * Time.deltaTime);
-            //transform.position += Vector3.forward * _speed * Time.deltaTime;
-
             return;
         }
 
-        if (transform.position.y > 0.5f)
+        // 플레이어의 y축 좌표를 확인하여 점프 한 상태인지 확인
+        if (transform.position.y > 0.005f)
         {
-            _playerAnim.SetBool("isJump", true);
-            _playerAnim.SetBool("isRun", false);
-            _isJump = true;
+            JumpToggle(true);
         }
         else
         {
-            _playerAnim.SetBool("isJump", false);
-            _playerAnim.SetBool("isRun", true);
-            _isJump = false;
+            JumpToggle(false);
         }
 
-
+        // 플레이어의 x축 좌표 제한하여 낙사 방지
         if (transform.position.x > 3)
         {
             transform.position = new Vector3(3, transform.position.y, transform.position.z);
@@ -96,6 +83,8 @@ public class PlayerController : MonoBehaviour
             transform.position = new Vector3(-3, transform.position.y, transform.position.z);
         }
 
+        // 낙사하면 발생.
+        // 플레이 도중 낙사하지 않도록 조정은 하였지만, 시작하자마자 바깥으로 떨어지는 경우에 작동하도록 남겨둠
         if (transform.position.y < -10)
         {
             OnDeath();
@@ -128,62 +117,67 @@ public class PlayerController : MonoBehaviour
         #endregion
 
 
+        // 계산된 MoveVector 방향으로 이동
         transform.position += _moveVector * Time.deltaTime;
-
     }
 
-   
 
     //Coroutines
     
+    // 넉백 후 다시 속도를 되찾는 코루틴
     IEnumerator C_RestartRun()
     {
-        float alphaValue = 0f;
-        alphaValue = Mathf.Clamp01(alphaValue);
+        float alphaValue = 0f;                      // Lerp 를 위한 alpha value
+        alphaValue = Mathf.Clamp01(alphaValue);     // alpha value 이므로, 0~1로 값 제한
 
-        while (_speed < GetMaxSpeed())
+        while (_speed < _maxSpeed)
         {
-            alphaValue += (Time.deltaTime / RUN_RESTART_DELAY);
-            _speed = Mathf.Lerp(0, GetMaxSpeed(), alphaValue);
+            alphaValue += (Time.deltaTime / RUN_RESTART_DELAY); // RUN_RESTART_DELAY 만큼의 시간이 흐르면 alpha value 가 1이 됨
+            _speed = Mathf.Lerp(0, _maxSpeed, alphaValue);      // Lerp
             yield return null;
         }
-        _speed = GetMaxSpeed();
+        _speed = _maxSpeed;                                     // 속도 값의 오차가 발생할 경우 상정
     }
 
+    // 장애물과 충돌시 넉백을 발생시키는 코루틴
     IEnumerator C_KnockBack()
     {
+        _isKnockBacked = true;                                                  // 해당 코루틴이 실행되는 동안 다른 넉백 코루틴이 등록되지 않도록하는 bool
         _hitParticle.Play();
-        _isKnockBacked = true;
-        _playerAnim.SetBool("isDamaged", true);
-        _speed = 0f;
-        _playerRb.AddForce(Vector3.back * KNOCK_BACK_FORCE, ForceMode.Impulse);
-        yield return new WaitForSeconds(0.5f);
-        _playerAnim.SetBool("isDamaged", false);
-        yield return new WaitForSeconds(1.5f);
-        _isKnockBacked = false;
+        _playerAnim.SetBool("isDamaged", true);         
+        _speed = 0f;                                                            // 해당 속도는 C_RestartRun에서 원상복구됨
+        _playerRb.AddForce(Vector3.back * KNOCK_BACK_FORCE, ForceMode.Impulse); // 지정된 상수값 만큼 플레이어의 뒤쪽 방향으로 순간적인 힘을 가함
+        yield return new WaitForSeconds(0.5f);                                  // 애니메이션 재생을 위한 딜레이
+        _playerAnim.SetBool("isDamaged", false);            
+        yield return new WaitForSeconds(1.5f);                                  // 연속적으로 발생하지 않도록 피격에 쿨타임을 줌
+        _isKnockBacked = false;                                                 // 해당 코루틴이 끝났음을 알림. 이 시점 이후로 플레이어는 다시 피격당할 수 있음
 
     }
 
+    // 슬라이딩
     IEnumerator C_Sliding()
     {
-        _isSliding = true;
+        _isSliding = true;                                              // 슬라이딩 시작됨을 알림
 
-        Vector3 colliderSize = _playerCollider.size;
-        Vector3 colliderCenter = _playerCollider.center;
+        Vector3 colliderSize = _playerCollider.size;                    //플레이어의 기존 collider 크기 저장
+        Vector3 colliderCenter = _playerCollider.center;                //플레이어의 기존 collider 중심 좌표 저장
 
+        // 플레이어의 collider 크기와 중심좌표의 y값을 2로 나누어 저장
         _playerCollider.size = new Vector3(_playerCollider.size.x, _playerCollider.size.y / 2, _playerCollider.size.z);
         _playerCollider.center = new Vector3(_playerCollider.center.x, _playerCollider.center.y / 2, _playerCollider.center.z);
 
         _playerAnim.SetBool("isSlide", true);
-        yield return new WaitForSeconds(0.7f);
+        yield return new WaitForSeconds(0.7f);                         // 애니메이션 재생을 위한 딜레이
 
-        _playerCollider.size = colliderSize;
-        _playerCollider.center = colliderCenter;
+        // 슬라이딩 끝난 이후 조정한 Collider의 값 원복
+        _playerCollider.size = colliderSize;                           
+        _playerCollider.center = colliderCenter;                       
 
         _playerAnim.SetBool("isSlide", false);
-        _isSliding = false;
+        _isSliding = false;                                            // 슬라이딩 끝났음을 알림
     }
 
+    // 사망시, 사망 애니메이션 재생되는 것을 볼 수 있도록 딜레이
     IEnumerator C_DeathDelay()
     {
         _deadParticle.Play();
@@ -194,11 +188,19 @@ public class PlayerController : MonoBehaviour
 
     // PublicMethods
 
+    // 플레이어의 최대속도 증가
     public void SpeedUp()
     {
-        _maxSpeed += 0.35f;
+        _maxSpeed += 0.5f;
+
+        // 속도 복구 코루틴이 실행되고 있지 않다면 현재속도를 변경된 최대속도로 갱신
+        if(_beforeRestartRunCoroutine == null)
+        {
+            _speed = _maxSpeed;
+        }
     }
 
+    // 플레이어의 현재 속도 반환
     public float GetSpeed()
     {
         return _speed;
@@ -206,29 +208,33 @@ public class PlayerController : MonoBehaviour
 
     // PrivateMethods
 
-    private float GetMaxSpeed() 
+    // 플레이어의 점프 상태를 토글
+    private void JumpToggle(bool isJump)
     {
-        return _maxSpeed + GameManager.Instance.ScoreManager.level - 1;
+        _playerAnim.SetBool("isJump", isJump);
+        _playerAnim.SetBool("isRun", !isJump);
+        _isJump = isJump;
     }
 
+    // 플레이어가 데미지를 입음
     private void GetDamage()
     {
-        
         _health--;
-        _hud.GetDamage();
+        _hud.GetDamage();                  // HUD 의 하트 이미지 1개 감소하는 함수 호출
 
         if (_health <= 0)
         {
-            OnDeath();
+            OnDeath();                     // 체력 <0 이면 사망 메서드 호출
         }
-        StartCoroutine(C_KnockBack());
+        StartCoroutine(C_KnockBack());     // 넉백
     }
 
+    // 사망
     private void OnDeath()
     {
         IsDead = true;
         _playerAnim.SetBool("isDead", true);
-        StartCoroutine(C_DeathDelay());
+        StartCoroutine(C_DeathDelay());      // 사망 딜레이
     }
 
 
@@ -247,10 +253,12 @@ public class PlayerController : MonoBehaviour
     {
         if (collision.gameObject.CompareTag("Obstacle"))
         {
-            if(_beforeRestartRunCoroutine != null)
+            // 이전에 등록된 C_RestartRun 이 있으면 지움
+            if (_beforeRestartRunCoroutine != null)
             {
                 StopCoroutine(_beforeRestartRunCoroutine);
             }
+
             _beforeRestartRunCoroutine = StartCoroutine(C_RestartRun());
         }
     }
@@ -258,14 +266,14 @@ public class PlayerController : MonoBehaviour
     {
         if (other.CompareTag("Heart"))
         {
-            _hud.GetHeart();
+            _hud.GetHeart();                        //HUD 의 하트 하나 증가시키는 메서드 호출
+
             if (_health < 3)
             {
                 _health++;
             }
 
             other.gameObject.SetActive(false);
-
         }
 
         if (other.CompareTag("Item"))
@@ -311,7 +319,7 @@ public class PlayerController : MonoBehaviour
         
         if(input != null && _isJump == false)
         {
-            _moveVector = new Vector3(input.x*GetMaxSpeed(), 0f, _speed);
+            _moveVector = new Vector3(input.x*_maxSpeed, 0f, _speed);
         }
     }
 }

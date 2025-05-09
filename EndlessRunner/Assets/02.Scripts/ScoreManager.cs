@@ -1,11 +1,9 @@
 using UnityEngine;
-using UnityEngine.UI;
 using TMPro;
-using System;
-using UnityEngine.SocialPlatforms.Impl;
 
 public class ScoreManager : MonoBehaviour
 {
+    #region
     // 점수 기믹 설계
     // 1. 인게임 내에서 간단하게 사용할 경우, 필드로 만든다
     // 2. 점수를 게임 종료 이후에도 저장해야 할 경우 다음을 고려한다.
@@ -20,77 +18,82 @@ public class ScoreManager : MonoBehaviour
     //                           인게임 데이터를 구성할 때 가장 쉽고 편리
     //    2-5 CSV         : 엑셀 파일에 필요한 데이터들을 나열해두고, C# 스크립트를 통해 해당 값을 얻어와서 적용
     //                      주로 맵 패턴, 스크립트 대화 호출, 기본적인 데이터
+    #endregion
+        
+    [SerializeField] PlayerController playerController;
+    [SerializeField] TextMeshProUGUI scoreText;             // 이번에 기록한 점수
+    [SerializeField] TextMeshProUGUI levelText;             // 레벨
+    [SerializeField] TextMeshProUGUI HighScoreText;         // 최고 점수
+    [SerializeField] TextMeshProUGUI RunDistanceText;       // 현재 이동거리
 
-    [SerializeField] DeadManager _deadManager;
+    public int level;
 
-   [ SerializeField] PlayerController playerController;
-   [ SerializeField] TextMeshProUGUI scoreText;
-   [ SerializeField] TextMeshProUGUI levelText;
-   [ SerializeField] TextMeshProUGUI HighScoreText;
-   [ SerializeField] TextMeshProUGUI RunDistanceText;
-    public int level = 1;
-
-    private int _maxLevel = 10;
-    private int _levelPerScore = 200;
-    private float _score = 0.0f;
-    private float _distance = 0.0f;
+    private float _score;
+    private float _distance;
+    private int _levelPerScore;
 
     const int POINT_PER_ITEM = 10;
-
+    const int MAX_LEVEL = 10;
 
 
     private void Awake()
     {
+        // 필드 초기화
+        level = 1;
+        _score = 0.0f;
+        _distance = 0.0f;
+        _levelPerScore = 50;
+
+        // PlayerPrefs 를 통해 최고점수 관리
         if (PlayerPrefs.HasKey("HIGH_SCORE") == false)
         {
-            Debug.Log("High_Score 키 생성");
             PlayerPrefs.SetInt("HIGH_SCORE", 0);
-        }
-        else
-        {
-            Debug.Log("High_Score 키 갱신");
         }
 
         HighScoreText.text = $"High Score : {PlayerPrefs.GetInt("HIGH_SCORE")}";
         SetText();
     }
 
-    // Update is called once per frame
     void Update()
     {
+        // 플레이어 사망시 실행 x
         if (playerController.IsDead)
             return;
 
+        // 스타트 애니메이션 진행중이면 실행 x
         if (Time.timeSinceLevelLoad < CameraController._cameraAnimateDuration)
             return;
 
-        if (_score >= _levelPerScore)
+        // 지정된 스코어 넘기면 레벨업 메서드 호출
+        if (_distance >= _levelPerScore)
         {
             LevelUp();
         }
 
+        // 이동거리 = Time.deltaTime * 플레이어의 현재 속도
         _distance += Time.deltaTime*playerController.GetSpeed();
 
-       
-
+        // 텍스트 갱신
         SetText();
 
     }
 
     private void LevelUp()
     {
-        if(level == _maxLevel)
+        // 이미 최대레벨이면 실행 x
+        if(level >= MAX_LEVEL)
         {
             return;
         }
 
-        _levelPerScore *= 2;
         level++;
-        playerController.SpeedUp();
+        _levelPerScore *= 2;            // 레벨업에 필요한 점수 2배
+        playerController.SpeedUp();     // 플레이어의 최대속도 증가
     }
 
     private void SetText()
     {
+        // 현재 점수가 최고 점수를 넘었다면 최고점수도 함께 갱신
         if (_score > PlayerPrefs.GetInt("HIGH_SCORE"))
         {
 
@@ -104,12 +107,12 @@ public class ScoreManager : MonoBehaviour
     
     public void GetScore()
     {
-        _score += POINT_PER_ITEM;
+        _score += POINT_PER_ITEM;       // 아이템 배당 점수 만큼 점수 증가
     }
 
     public void SettleScore()
     {
-        _deadManager.SetScoreText(_score, _distance);
+        GameManager.Instance.DeadManager.SetScoreText(_score, _distance);   // 사망시 결과창에 점수가 표시될 수 있도록 값 전달
     }
    
 }

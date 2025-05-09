@@ -8,12 +8,14 @@ public class DeadManager : MonoBehaviour
     [SerializeField] TextMeshProUGUI _highScoreText;
     [SerializeField] TextMeshProUGUI _runDistanceText;
 
+
     private void Awake()
     {
         gameObject.SetActive(false);
     }
 
-
+    
+    // 게임오버시에 결산창 세팅
     public void SetScoreText(float score, float distance)
     {
         gameObject.SetActive(true);
@@ -28,12 +30,14 @@ public class DeadManager : MonoBehaviour
 
     }
 
+    // 재시작버튼
     public void OnReplayButtonEnter()
     {
         gameObject.SetActive(false);
         SceneManager.LoadScene(SceneManager.GetActiveScene().name);
     }
 
+    // 타이틀버튼
     public void OnTitleButtonEnter()
     {
         gameObject.SetActive(false);
