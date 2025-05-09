@@ -16,7 +16,7 @@ public class PlayerController : MonoBehaviour
     Rigidbody _playerRb;                                    // 플레이어 Rigidbody
     BoxCollider _playerCollider;                            // 플레이어 BoxCollider
     Coroutine _beforeRestartRunCoroutine;                   // Restart 코루틴 동작을 위한 이전 코루틴 참조변수
-
+   
     private bool isInvincible = false;
     private Renderer[] renderers;
 
@@ -26,15 +26,14 @@ public class PlayerController : MonoBehaviour
     int _health;                                            // 현재 체력
     float _maxSpeed;                                        // 플레이어 최대 속도
     float _speed;                                           // 플레이어의 이동속도
-    Vector3 _gravity;
 
     public bool IsDead;                                     // 사망했는가
     
-    public float JUMP_FORCE = 28f;                            // 점프 높이
+    const float JUMP_FORCE = 20f;                            // 점프 높이
     const float JUMP_Distance = 4f;                           // 점프 거리
-    const float KNOCK_BACK_FORCE = 10f;                     // 넉백 세기
+    const float KNOCK_BACK_FORCE = 7f;                     // 넉백 세기
     const float START_SPEED = 5f;                           // 최초 속도
-    const float RUN_RESTART_DELAY = 1f;                     // 충돌후 원래 속도로 돌아가는데 걸리는 시간
+    const float RUN_RESTART_DELAY = 0.5f;                     // 충돌후 원래 속도로 돌아가는데 걸리는 시간
 
 
     //LifeCycles
@@ -44,7 +43,6 @@ public class PlayerController : MonoBehaviour
         renderers = GetComponentsInChildren<Renderer>();
 
         // 필드 초기화
-        _gravity = new Vector3(0, -9.8f, 0);
         _maxSpeed = START_SPEED;
         _speed = _maxSpeed;
         
@@ -89,10 +87,7 @@ public class PlayerController : MonoBehaviour
         {
             transform.position = new Vector3(-3, transform.position.y, transform.position.z);
         }
-        if (transform.position.y <= 0)
-        {
-            transform.position = new Vector3(transform.position.x, 0f, transform.position.z);
-        }
+        
 
 
 
@@ -134,12 +129,13 @@ public class PlayerController : MonoBehaviour
         if (_isJump)
         {
 
-            transform.position += new Vector3(_moveVector.x,(_moveVector.y + _gravity.y), JUMP_Distance ) * Time.deltaTime;
+            transform.position += new Vector3(_moveVector.x,_moveVector.y , JUMP_Distance ) * Time.deltaTime;
         }
         else
         {
-            transform.position += (_moveVector + _gravity) * Time.deltaTime;
+            transform.position += new Vector3(_moveVector.x, _moveVector.y , _speed) * Time.deltaTime;
         }
+
 
     }
 
@@ -165,13 +161,19 @@ public class PlayerController : MonoBehaviour
     IEnumerator C_KnockBack()
     {
         _isKnockBacked = true;                                                  // 해당 코루틴이 실행되는 동안 다른 넉백 코루틴이 등록되지 않도록하는 bool
+    
         _hitParticle.Play();
         _playerAnim.SetBool("isDamaged", true);         
         _speed = 0f;                                                            // 해당 속도는 C_RestartRun에서 원상복구됨
-        _playerRb.AddForce(Vector3.back * KNOCK_BACK_FORCE, ForceMode.Impulse); // 지정된 상수값 만큼 플레이어의 뒤쪽 방향으로 순간적인 힘을 가함
-        yield return new WaitForSeconds(0.5f);                                  // 애니메이션 재생을 위한 딜레이
+
+
+        _playerRb.AddForce(KNOCK_BACK_FORCE * Vector3.back, ForceMode.Impulse);
+
+        yield return new WaitForSeconds(0.3f);                                  // 애니메이션 재생을 위한 딜레이
+
+
         _playerAnim.SetBool("isDamaged", false);            
-        yield return new WaitForSeconds(1.5f);                                  // 연속적으로 발생하지 않도록 피격에 쿨타임을 줌
+        yield return new WaitForSeconds(1.7f);                                  // 연속적으로 발생하지 않도록 피격에 쿨타임을 줌
         _isKnockBacked = false;                                                 // 해당 코루틴이 끝났음을 알림. 이 시점 이후로 플레이어는 다시 피격당할 수 있음
 
     }
@@ -236,16 +238,19 @@ public class PlayerController : MonoBehaviour
 
     IEnumerator C_Jump()
     {
+        _isJump = true;
+
         while (_moveVector.y < JUMP_FORCE)
         {
-            _moveVector += Vector3.up;
+            _moveVector += (Vector3.up) ;
             yield return null;
         }
         while (_moveVector.y > 0)
         {
-            _moveVector += Vector3.down;
+            _moveVector += (Vector3.down);
             yield return null;
         }
+        _isJump = false;
     }
 
     // PublicMethods
@@ -332,6 +337,7 @@ public class PlayerController : MonoBehaviour
             _beforeRestartRunCoroutine = StartCoroutine(C_RestartRun());
         }
     }
+
     private void OnTriggerEnter(Collider other)
     {
         if (other.CompareTag("Heart"))
@@ -353,6 +359,7 @@ public class PlayerController : MonoBehaviour
         }
     }
 
+  
 
     //InputActions
 
@@ -361,7 +368,12 @@ public class PlayerController : MonoBehaviour
     /// </summary>
     public void OnSlide(InputAction.CallbackContext context)
     {
-        if(context.performed && _isJump == false && _isSliding ==false)
+        if (Time.timeSinceLevelLoad < CameraController._cameraAnimateDuration)
+        {
+            return;
+        }
+
+        if (context.performed && _isJump == false && _isSliding ==false)
         {
             StartCoroutine(C_Sliding());
         }
@@ -372,6 +384,12 @@ public class PlayerController : MonoBehaviour
     /// </summary>
     public void OnJump(InputAction.CallbackContext context)
     {
+        if (Time.timeSinceLevelLoad < CameraController._cameraAnimateDuration)
+        {
+            return;
+        }
+
+
         if (context.performed&& _isJump == false)
         {
             //_playerRb.AddForce(Vector3.up * JUMP_FORCE, ForceMode.Impulse);
@@ -387,6 +405,11 @@ public class PlayerController : MonoBehaviour
     /// <param name="context"> Vector2 Value Read 가능 </param>
     public void OnMove(InputAction.CallbackContext context)
     {
+        if (Time.timeSinceLevelLoad < CameraController._cameraAnimateDuration)
+        {
+            return;
+        }
+
         Vector2 input = context.ReadValue<Vector2>();
         
         if(input != null && _isJump == false)
